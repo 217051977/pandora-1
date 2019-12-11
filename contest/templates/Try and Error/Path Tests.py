@@ -1,6 +1,6 @@
 import os
 
-path = 'main/sec/file.txt'
+path = 'New text file'
 op = os.path
 
 print("Path: " + path)

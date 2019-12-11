@@ -30,6 +30,20 @@ class CreateTestModelForm(forms.ModelForm):
         model = Test
         fields = "__all__"
 
+    def changed_input_file(self, *args, **kwargs):
+        input_file = self.changed_data.get('input_file')
+
+        print("****************************************" + str(input_file) + "****************************************")
+
+        return input_file
+
+    def changed_output_file(self, *args, **kwargs):
+        output_file = self.changed_data.get('output_file')
+
+        print("****************************************" + str(output_file) + "****************************************")
+
+        return output_file
+
 
 class SignUpForm(UserCreationForm):
     first_name = forms.CharField(required=True, label='First Name', max_length=30)

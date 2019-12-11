@@ -2,7 +2,7 @@ import os
 import zipfile
 import subprocess
 
-path = '/home/bruno/dev/pandora_V2/contest/templates/Try and Error/Files/1234.zip'
+path = '/home/bruno/dev/pandora_V2/contest/templates/Try and Error/Files/dasdsas.zip'
 
 dir_path = os.path.dirname(path)
 dir_path_parts = dir_path.split('/')
@@ -14,7 +14,7 @@ with zipfile.ZipFile(path, 'r') as ZIP:
     ZIP.extractall(dir_path)
     # ZIP.extractall(immediate_before_dir)
     # ZIP.extractall('tmp_ins')
-
+file = open("/home/bruno/dev/pandora_V2/contest/templates/Try and Error/Files/dasdsas.zip", 'r')
 
 # def check_output(command, cwd):
 #     print('cwd = ' + cwd)

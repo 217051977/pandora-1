@@ -5,6 +5,11 @@ import datetime
 import sys
 import csv
 import zipfile
+import filecmp
+import fileinput
+import tarfile
+import tempfile
+# import olefile.olefile
 
 from .forms import SignUpForm, AttemptModelForm, TeamModelForm, TeamMemberForm, TeamMemberApprovalForm, \
     CreateContestModelForm, CreateTestModelForm
@@ -204,18 +209,22 @@ def check_in_files(f, contest):
     # set the zip path
     zip_path = os.path.abspath(f.path)
     zip_dir = os.path.dirname(zip_path)
+    print_variable_debug("zip_path: " + str(zip_path))
+    search_dir = str(zip_dir) + '/temp/in'
+    print_variable_debug("search_dir: " + str(search_dir))
 
     # unzip zip file
     unzip_zip_file(zip_path, f, '/in')
 
     # find the last branch level
     count = 0
-    for c in os.walk(str(zip_dir) + '/in'):
+    for c in os.walk(search_dir):
         count += 1
 
     # for the last branch level
     file_tree_branch = 0
-    for files in os.walk(str(zip_dir) + '/in'):
+    for files in os.walk(search_dir):
+        print(files)
         file_tree_branch += 1
         if file_tree_branch == count:
             print_variable_debug("Branch founded!")
@@ -226,7 +235,8 @@ def check_in_files(f, contest):
                 if check_is_in_file(files[len(files) - 1]):
                     print_variable_debug("Are in files!")
                     # if the files are correct return them
-                    return files[2]
+                    print_variables_debug(files)
+                    return os.listdir(files[0])
 
     print_variable_debug("Leaving!")
 
@@ -239,6 +249,9 @@ def check_out_files(f, contest, files_max_length):
     # set the zip path
     zip_path = os.path.abspath(f.path)
     zip_dir = os.path.dirname(zip_path)
+    print_variable_debug("zip_path: " + str(zip_path))
+    search_dir = str(zip_dir) + '/temp/out'
+    print_variable_debug("search_dir: " + str(search_dir))
 
     # unzip zip file
     unzip_zip_file(zip_path, f, '/out')
@@ -246,14 +259,14 @@ def check_out_files(f, contest, files_max_length):
     # check last branch
     count = 0
     x = []
-    for c in os.walk(str(zip_dir) + '/out'):
+    for c in os.walk(search_dir):
         x.append(c)
         count += 1
     print_variables_debug(x)
 
     # for the last branch
     file_tree_branch = 0
-    for files in os.walk(str(zip_dir) + '/out'):
+    for files in os.walk(search_dir):
         file_tree_branch += 1
         if file_tree_branch == count:
             # print_variable_debug("Branch founded!")
@@ -487,7 +500,8 @@ def admin_contest_creation(request):
     return render(request, template_name, context)
 
 
-def set_test_in_order(tests):
+def set_test_in_order(tests, dir):
+    d = str(dir) + '/'
     tests_in_order = []
     last_number = 0
 
@@ -505,7 +519,7 @@ def set_test_in_order(tests):
                     #                       last_number + 1 == test_number])
                     if last_number + 1 == int(test_number):
                         last_number += 1
-                        tests_in_order.append(test)
+                        tests_in_order.append(str(d) + str(test))
 
     return tests_in_order
 
@@ -524,63 +538,74 @@ def admin_test_creation(request):
     if test_form.is_valid():
         obj = test_form.save(commit=False)
         contest = obj.contest
-        zip_in = obj.input_file
-        zip_out = obj.output_file
-        # start debug
-        print_variable_debug(obj.contest.short_name)
-        print_variable_debug(contest)
-        # end debug
-        if '.zip' in str(zip_in) and '.zip' in str(zip_out):
-            print_variable_debug("The files: \n" + str(zip_in).split('.')[0] + "\n" + str(zip_out).split('.')[0] +
-                                 "\nare zip files!")
-            in_files = set_test_in_order(check_in_files(zip_in, contest))
-            print_variable_debug(in_files)
-
-            print_variable_debug(zip_in)
-            n_tests = len(in_files)
-            print_variable_debug(n_tests)
-
-            print_variable_debug(zip_out)
-            out_files = set_test_in_order(check_out_files(zip_out, contest, n_tests))
-            print_variable_debug(out_files)
-
-            a_ok = True
-
-            for i in range(len(in_files)):
-                if not in_files[i].split('.')[0] == out_files[i].split('.')[0]:
-                    a_ok = False
-
-            if a_ok:
-                print_variable_debug("There is an out for each in!")
-                weight = 100 / n_tests
-                benchmark = False
-                test_number = 0
-
-                for i in range(n_tests):
-                    test_number += 1
-                    form = CreateTestModelForm(request.POST or None, request.FILES or None)
-                    test = form.save(commit=False)
-                    test.contest = contest
-                    test.weight_pct = weight
-                    test.input_file = in_files[i]
-                    test.output_file = out_files[i]
-                    if benchmark:
-                        test.use_for_time_benchmark = False
-                        test.use_for_memory_benchmark = False
-                        test.mandatory = False
-                    else:
-                        test.use_for_time_benchmark = True
-                        test.use_for_memory_benchmark = True
-                        test.mandatory = True
-                        benchmark = True
-                    print_variables_debug(["Test " + str(test_number) + " has:", test.contest, test.weight_pct,
-                                           test.mandatory, test.use_for_memory_benchmark, test.use_for_time_benchmark])
-
-                    test.save()
-                    print_variable_debug("Test " + str(test_number) + " made!")
-                    print_variable_debug(i)
-            print(obj)
-
+        # zip_in = obj.input_file
+        # zip_out = obj.output_file
+        # # start debug
+        # # print_variable_debug(obj.contest.short_name)
+        # # print_variable_debug(contest)
+        # # end debug
+        # if '.zip' in str(zip_in) and '.zip' in str(zip_out):
+        #     print_variable_debug("The files: \n" + str(zip_in).split('.')[0] + "\n" + str(zip_out).split('.')[0] +
+        #                          "\nare zip files!")
+        #     in_files = set_test_in_order(check_in_files(zip_in, contest), os.path.dirname(os.path.abspath(zip_in.path)))
+        #     print_variable_debug(in_files)
+        #
+        #     print_variable_debug(zip_in)
+        #     n_tests = len(in_files)
+        #     print_variable_debug(n_tests)
+        #
+        #     print_variable_debug(zip_out)
+        #     out_files = set_test_in_order(check_out_files(zip_out, contest, n_tests),
+        #                                   os.path.dirname(os.path.abspath(zip_out.path)))
+        #     print_variable_debug(out_files)
+        #
+        #     a_ok = True
+        #
+        #     for i in range(len(in_files)):
+        #         if not in_files[i].split('.')[0] == out_files[i].split('.')[0]:
+        #             a_ok = False
+        #
+        #     if a_ok:
+        #         print_variable_debug("There is an out for each in!")
+        #         weight = 100 / n_tests
+        #         benchmark = False
+        #         test_number = 0
+        #
+        #         for i in range(n_tests):
+        #             test_number += 1
+        #             form = CreateTestModelForm(request.POST or None, request.FILES or None)
+        #             test = form.save(commit=False)
+        #             test.contest = contest
+        #             test.weight_pct = weight
+        #             test.output_file = out_files[i]
+        #             # with open(in_files[i], 'r') as in_file_to_add:
+        #             #     asdasd = in_file_to_add.read()
+        #             #     test.input_file = tempfile.mkstemp(None, None, os.path.dirname(zip_in.path), asdasd)
+        #             #     print_variable_debug(asdasd)
+        #             #     # print_variables_debug([in_files[i], in_file_to_add])
+        #             #     # test.input_file = fileinput in_file_to_add
+        #             #     in_file_to_add.close()
+        #             # with open(out_files[i], 'r') as out_file_to_add:
+        #             #     print_variables_debug([out_files[i], out_file_to_add])
+        #             test.output_file = out_files[i]  # out_file_to_add
+        #                 # out_file_to_add.close()
+        #             if benchmark:
+        #                 test.use_for_time_benchmark = False
+        #                 test.use_for_memory_benchmark = False
+        #                 test.mandatory = False
+        #             else:
+        #                 test.use_for_time_benchmark = True
+        #                 test.use_for_memory_benchmark = True
+        #                 test.mandatory = True
+        #                 benchmark = True
+        #             print_variables_debug(["Test " + str(test_number) + " has:", test.contest, test.weight_pct,
+        #                                    test.mandatory, test.use_for_memory_benchmark, test.use_for_time_benchmark])
+        #
+        #             test.save()
+        #             print_variable_debug("Test " + str(test_number) + " made!")
+        #             print_variable_debug(i)
+        #     print(obj)
+        obj.save()
         return redirect(contest.get_absolute_url())
         # obj.save()
     context = ({'form': test_form})
@@ -655,6 +680,53 @@ def admin_view(request, id):
 
 
 # attempt
+@login_required
+def attempt_create_view(request, id):
+    template_name = 'contest/contest_form.html'
+    contest_obj = get_object_or_404(Contest, id=id)
+    context = {'contest': contest_obj}
+    can_submit = True
+
+    present = timezone.now()
+    # present = datetime.datetime.now()
+    if present < contest_obj.start_date or present > contest_obj.end_date:
+        # contest is not opened
+        return redirect(os.path.join(contest_obj.get_absolute_url()))
+
+    team_obj, members = get_user_team(request, contest_obj.id)
+    if not team_obj:
+        return redirect(os.path.join(contest_obj.get_absolute_url(), 'team/join/'))
+
+    atempts = get_team_attempts(team_obj)
+
+    if contest_obj.max_submitions > 0:
+        if atempts and atempts.count() >= contest_obj.max_submitions:
+            messages.error(request, "You have reached the maximum number of submitions for this contest.")
+            can_submit = False
+
+    if not contest_obj.is_open:
+        messages.error(request, "This contest is not active.")
+        can_submit = False
+
+    if not team_obj.active or not members.filter(user=request.user).first().approved or not request.user.profile.valid:
+        messages.error(request,
+                       "You need to be an Active member and approved member of an active team to make submitions")
+        can_submit = False
+
+    form = AttemptModelForm(request.POST or None, request.FILES or None)
+    if can_submit and form.is_valid():
+        obj = form.save(commit=False)
+        obj.user = request.user
+        obj.contest = contest_obj
+        obj.team = team_obj
+        obj.save()
+        handle_uploaded_file(obj, obj.file, contest_obj)
+        return redirect(obj.get_absolute_url())
+
+    context.update({'form': form})
+    return render(request, template_name, context)
+
+
 @login_required
 def attempt_list_view(request, id):
     template_name = 'contest/atempt_list.html'
@@ -738,53 +810,6 @@ def attempt_view(request, id):
     context.update({'n_general': n_general})
     context.update({'results': results})
 
-    return render(request, template_name, context)
-
-
-@login_required
-def attempt_create_view(request, id):
-    template_name = 'contest/contest_form.html'
-    contest_obj = get_object_or_404(Contest, id=id)
-    context = {'contest': contest_obj}
-    can_submit = True
-
-    present = timezone.now()
-    # present = datetime.datetime.now()
-    if present < contest_obj.start_date or present > contest_obj.end_date:
-        # contest is not opened
-        return redirect(os.path.join(contest_obj.get_absolute_url()))
-
-    team_obj, members = get_user_team(request, contest_obj.id)
-    if not team_obj:
-        return redirect(os.path.join(contest_obj.get_absolute_url(), 'team/join/'))
-
-    atempts = get_team_attempts(team_obj)
-
-    if contest_obj.max_submitions > 0:
-        if atempts and atempts.count() >= contest_obj.max_submitions:
-            messages.error(request, "You have reached the maximum number of submitions for this contest.")
-            can_submit = False
-
-    if not contest_obj.is_open:
-        messages.error(request, "This contest is not active.")
-        can_submit = False
-
-    if not team_obj.active or not members.filter(user=request.user).first().approved or not request.user.profile.valid:
-        messages.error(request,
-                       "You need to be an Active member and approved member of an active team to make submitions")
-        can_submit = False
-
-    form = AttemptModelForm(request.POST or None, request.FILES or None)
-    if can_submit and form.is_valid():
-        obj = form.save(commit=False)
-        obj.user = request.user
-        obj.contest = contest_obj
-        obj.team = team_obj
-        obj.save()
-        handle_uploaded_file(obj, obj.file, contest_obj)
-        return redirect(obj.get_absolute_url())
-
-    context.update({'form': form})
     return render(request, template_name, context)
 
 
