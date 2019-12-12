@@ -34,12 +34,10 @@ from subprocess import check_output, CalledProcessError
 # ------------------------------------------------------- debug -------------------------------------------------------
 # forms
 def print_form_info_debug(form):
-    if not form.is_valid():
-        print("-----------------------------------\nThe form is built with:\n" + str(form) +
-              "\n-----------------------------------")
-    print("-----------------------------------\nThe form is valid: " + str(form.is_valid()) +
+    print("-----------------------------------\nTHE FORM:\n" +
+          str(form) +
+          "\nIS VALID?: " + str(form.is_valid()) +
           "\n-----------------------------------")
-
     return
 
 
@@ -48,7 +46,6 @@ def print_variable_debug(variable):
     print("-----------------------------------------------------------------\n"
           + str(variable) +
           "\n-----------------------------------------------------------------")
-
     return
 
 
@@ -61,7 +58,22 @@ def print_variables_debug(variables):
         else:
             variable_debug += '\n' + str(part)
     print_variable_debug(variable_debug)
+    return
 
+
+# --------------------------------------------------------errors-------------------------------------------------------
+# error
+def print_error(variables):
+    variable_debug = ''
+    for part in variables:
+        if variable_debug == '':
+            variable_debug = str(part)
+        else:
+            variable_debug += '\n' + str(part)
+
+    print("*****************************************************************\n"
+          + str(variable_debug) +
+          "\n*****************************************************************")
     return
 
 
@@ -235,8 +247,8 @@ def check_in_files(f, contest):
                 if check_is_in_file(files[len(files) - 1]):
                     print_variable_debug("Are in files!")
                     # if the files are correct return them
-                    print_variables_debug(files)
-                    return os.listdir(files[0])
+                    print_variables_debug([files[0], files[2]])
+                    return [files[0], files[2]]
 
     print_variable_debug("Leaving!")
 
@@ -277,7 +289,8 @@ def check_out_files(f, contest, files_max_length):
                 if check_is_out_file(files[len(files) - 1], files_max_length):
                     print_variable_debug("Are out files!")
                     # if the files are correct return them
-                    return files[2]
+                    print_variables_debug([files[0], files[2]])
+                    return [files[0], files[2]]
 
     print_variable_debug("Leaving!")
     # if the files have some problem, return an empty list
@@ -471,42 +484,16 @@ def get_team_attempts(team):
     return Atempt.objects.filter(contest=team.contest, user__in=members_ids).order_by('-date')
 
 
-# ---------------------------------------------- @login_required functions ---------------------------------------------
-# admin creations
-@login_required
-def admin_contest_creation(request):
-    template_name = 'contest/contest_creation.html'
-
-    contest_form = CreateContestModelForm(request.POST or None, request.FILES or None)
-    print_form_info_debug(contest_form)
-    # test_form = CreateTestModelForm(request.POST or None)
-    # print("-----------------------------------The form for the test is: " + str(test_form) +
-    #       "-----------------------------------")
-    # print("-----------------------------------The form for the test is valid: " + str(test_form.is_valid()) +
-    #       "-----------------------------------")
-    if contest_form.is_valid():
-        obj = contest_form.save(commit=False)
-        obj.save()
-        print(obj)
-        # short_name = obj.short_name
-        # contest_obj = get_object_or_404(Contest, short_name=short_name)
-        # print(contest_obj)
-        # in_files = check_in_files(obj.in_files, contest_obj)
-        # out_files = check_out_files(obj.out_files, contest_obj, len(in_files))
-        # create_test(request, in_files, out_files, contest_obj)
-        # handle_uploaded_file(obj, obj.file, contest_obj) # to check the ins and outs files
-    context = ({'form': contest_form})
-
-    return render(request, template_name, context)
-
-
-def set_test_in_order(tests, dir):
-    d = str(dir) + '/'
+# set the list of test by order
+def set_test_in_order(tests):
+    d = str(tests[0]) + '/'
     tests_in_order = []
     last_number = 0
+    print_variables_debug(tests)
 
-    for i in range(len(tests)):
-        for test in tests:
+
+    for i in range(len(tests[1])):
+        for test in tests[1]:
             file_name = test.split('.')[0]
             # print_variable_debug(["File name: ", file_name])
             file_name_parts = file_name.split('_')
@@ -514,14 +501,40 @@ def set_test_in_order(tests, dir):
             for part in file_name_parts:
                 if 'test' in part:
                     # print_variable_debug("Found the test number")
+
                     test_number = part.split('test')[1]
                     # print_variables_debug([last_number + 1, int(test_number), last_number + 1 == int(test_number),
                     #                       last_number + 1 == test_number])
                     if last_number + 1 == int(test_number):
                         last_number += 1
-                        tests_in_order.append(str(d) + str(test))
+                        tests_in_order.append(os.path.join(d, test))
 
+    # print_variables_debug(tests[0])
+    # print_variables_debug(tests_in_order)
     return tests_in_order
+
+
+# ---------------------------------------------- @login_required functions ---------------------------------------------
+# admin creations
+@login_required
+def admin_contest_creation(request):
+    template_name = 'contest/contest_creation.html'
+    contest_short_name = ''
+
+    contest_form = CreateContestModelForm(request.POST or None, request.FILES or None)
+    print_form_info_debug(contest_form)
+
+    if contest_form.is_valid():
+        obj = contest_form.save(commit=False)
+        contest_short_name = obj.short_name
+        obj.save()
+        print(obj)
+        contest_obj = get_object_or_404(Contest, short_name=contest_short_name)
+        print_variables_debug(["CONTEST CREATED:", contest_obj])
+        return redirect(contest_obj.get_absolute_url())
+    context = ({'form': contest_form})
+
+    return render(request, template_name, context)
 
 
 @login_required
@@ -529,8 +542,6 @@ def admin_test_creation(request):
     template_name = 'contest/test_creation.html'
 
     test_form = CreateTestModelForm(request.POST or None, request.FILES or None)
-    print_form_info_debug(test_form)
-    # test_form = CreateTestModelForm(request.POST or None)
     # print("-----------------------------------The form for the test is: " + str(test_form) +
     #       "-----------------------------------")
     # print("-----------------------------------The form for the test is valid: " + str(test_form.is_valid()) +
@@ -538,74 +549,93 @@ def admin_test_creation(request):
     if test_form.is_valid():
         obj = test_form.save(commit=False)
         contest = obj.contest
-        # zip_in = obj.input_file
-        # zip_out = obj.output_file
-        # # start debug
-        # # print_variable_debug(obj.contest.short_name)
-        # # print_variable_debug(contest)
-        # # end debug
-        # if '.zip' in str(zip_in) and '.zip' in str(zip_out):
-        #     print_variable_debug("The files: \n" + str(zip_in).split('.')[0] + "\n" + str(zip_out).split('.')[0] +
-        #                          "\nare zip files!")
-        #     in_files = set_test_in_order(check_in_files(zip_in, contest), os.path.dirname(os.path.abspath(zip_in.path)))
-        #     print_variable_debug(in_files)
-        #
-        #     print_variable_debug(zip_in)
-        #     n_tests = len(in_files)
-        #     print_variable_debug(n_tests)
-        #
-        #     print_variable_debug(zip_out)
-        #     out_files = set_test_in_order(check_out_files(zip_out, contest, n_tests),
-        #                                   os.path.dirname(os.path.abspath(zip_out.path)))
-        #     print_variable_debug(out_files)
-        #
-        #     a_ok = True
-        #
-        #     for i in range(len(in_files)):
-        #         if not in_files[i].split('.')[0] == out_files[i].split('.')[0]:
-        #             a_ok = False
-        #
-        #     if a_ok:
-        #         print_variable_debug("There is an out for each in!")
-        #         weight = 100 / n_tests
-        #         benchmark = False
-        #         test_number = 0
-        #
-        #         for i in range(n_tests):
-        #             test_number += 1
-        #             form = CreateTestModelForm(request.POST or None, request.FILES or None)
-        #             test = form.save(commit=False)
-        #             test.contest = contest
-        #             test.weight_pct = weight
-        #             test.output_file = out_files[i]
-        #             # with open(in_files[i], 'r') as in_file_to_add:
-        #             #     asdasd = in_file_to_add.read()
-        #             #     test.input_file = tempfile.mkstemp(None, None, os.path.dirname(zip_in.path), asdasd)
-        #             #     print_variable_debug(asdasd)
-        #             #     # print_variables_debug([in_files[i], in_file_to_add])
-        #             #     # test.input_file = fileinput in_file_to_add
-        #             #     in_file_to_add.close()
-        #             # with open(out_files[i], 'r') as out_file_to_add:
-        #             #     print_variables_debug([out_files[i], out_file_to_add])
-        #             test.output_file = out_files[i]  # out_file_to_add
-        #                 # out_file_to_add.close()
-        #             if benchmark:
-        #                 test.use_for_time_benchmark = False
-        #                 test.use_for_memory_benchmark = False
-        #                 test.mandatory = False
-        #             else:
-        #                 test.use_for_time_benchmark = True
-        #                 test.use_for_memory_benchmark = True
-        #                 test.mandatory = True
-        #                 benchmark = True
-        #             print_variables_debug(["Test " + str(test_number) + " has:", test.contest, test.weight_pct,
-        #                                    test.mandatory, test.use_for_memory_benchmark, test.use_for_time_benchmark])
-        #
-        #             test.save()
-        #             print_variable_debug("Test " + str(test_number) + " made!")
-        #             print_variable_debug(i)
-        #     print(obj)
-        obj.save()
+        # create_each_test(request, )
+        zip_in = obj.input_file
+        zip_out = obj.output_file
+        # start debug
+        # print_variable_debug(obj.contest.short_name)
+        # print_variable_debug(contest)
+        # end debug
+        if '.zip' in str(zip_in) and '.zip' in str(zip_out):
+            # print_variables_debug(["THE FOLLOWING FILES ARE ZIP TYPE FILES: ",
+            #                       str(zip_in).split('.')[0], str(zip_out).split('.')[0]])
+            in_files = set_test_in_order(check_in_files(zip_in, contest))
+            print_variables_debug(["FILE ZIP THAT CONTAINS THE FILES WITH THE INPUTS FOR THE TESTS:", zip_in,
+                                   "\nFILES WITH THE INPUTS FOR THE TESTS:", in_files])
+            n_tests = len(in_files)
+            print_variables_debug(["NUMBER OF FILES WITH THE INPUTS FOR THE TESTS:", str(n_tests)])
+            # print_variable_debug(zip_out)
+            out_files = set_test_in_order(check_out_files(zip_out, contest, n_tests))
+            print_variables_debug(["FILE ZIP THAT CONTAINS THE FILES WITH THE OUTPUTS FOR THE TESTS:",zip_out,
+                                   "\nFILES WITH THE OUTPUTS FOR THE TESTS:", out_files])
+
+            a_ok = True
+
+            in_files_names = in_files[1]
+            out_files_names = out_files[1]
+
+            for i in range(len(in_files_names)):
+                if not in_files_names.split('/ins/')[1].split('.')[0] ==\
+                       out_files_names.split('/outs/')[1].split('.')[0]:
+                    error_var = ["THE FOLLOWING FILES DO NOT MATCH:",
+                                 in_files_names.split('/ins/')[1].split('.')[0],
+                                 out_files_names.split('/outs/')[1].split('.')[0]]
+                    print_error(error_var)
+                    a_ok = False
+
+            if a_ok:
+                print_variable_debug("EACH INPUT FILE HAS AN OUTPUT FILE")
+                weight = 100 / n_tests
+                benchmark = False
+                test_number = 0
+
+                print_variable_debug("STARTING TO CREATE THE TESTS:")
+                for i in range(n_tests):
+                    test_number += 1
+
+                    new_test = Test()
+                    new_test.contest = contest
+
+                    f = open(in_files[i], 'r')
+                    new_test.input_file.save(in_files[i].split('/ins/')[1], File(f))
+                    f.close()
+
+                    f = open(out_files[i], 'r')
+                    new_test.output_file.save(out_files[i].split('/outs/')[1], File(f))
+                    f.close()
+
+                    new_test.weight_pct = weight
+
+                    if benchmark:
+
+                        new_test.use_for_time_benchmark = False
+                        new_test.use_for_memory_benchmark = False
+                        new_test.mandatory = False
+
+                    else:
+
+                        new_test.use_for_time_benchmark = True
+                        new_test.use_for_memory_benchmark = True
+                        new_test.mandatory = True
+                        benchmark = True
+
+                    new_test.save()
+
+                    print_variables_debug(["THE TEST WITH THE NUMBER ID " + str(test_number) +
+                                           " hHAS BEEN CREATED WITH: ",
+                                           new_test.contest,
+                                           new_test.weight_pct,
+                                           new_test.mandatory,
+                                           new_test.use_for_memory_benchmark,
+                                           new_test.use_for_time_benchmark])
+                    # print_variables_debug(["THE ", i])
+            # print(obj)
+        else:
+            print_error(["THE FOLLOWING FILES ARE NOT ZIP TYPE FILES: \n",
+                                 str(zip_in).split('.')[0],
+                                 "\n" + str(zip_out).split('.')[0]])
+
+        # obj.save()
         return redirect(contest.get_absolute_url())
         # obj.save()
     context = ({'form': test_form})
@@ -796,6 +826,9 @@ def attempt_view(request, id):
         res.expected_output = smart_text(res.test.output_file.read(), encoding='utf-8', strings_only=False,
                                          errors='strict')
         res.obtained_output = smart_text(res.output.read(), encoding='utf-8', strings_only=False, errors='strict')
+        res.input = smart_text(res.test.input_file.read(), encoding='utf-8', strings_only=False,
+                                         errors='strict')
+
 
     context = {'contest': contest_obj}
     context.update({'team': team})

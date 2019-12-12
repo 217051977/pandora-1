@@ -14,6 +14,7 @@ pos = 0
 print("start")
 
 for file in os.walk(os.path.dirname(path)):
+    print(file)
     pos += 1
     if pos == count:
         print(str(file[len(file) - 1]) + "\n\n")

@@ -53,6 +53,7 @@
 								<th>Result</th>
 								<th>Info</th>
 								<th>Exp./Obt.</th>
+                                <th></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -72,6 +73,12 @@
 									<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modal-expected{{ forloop.counter }}">Open</button>
 									{% endif %}
 								</td>
+                                <td>
+  									{% if r.test.type_of_feedback == 1 %}
+									<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modal-input{{ forloop.counter }}">Open</button>
+									{% endif %}
+
+                                </td>
 							</tr>
 						{% endfor %}
 						</tbody>
@@ -147,5 +154,38 @@
 		</div>
 	</div>
 </div>
+
+
+
+
+
+
+
+
+
+
+
+    {% if r.test.type_of_feedback == 1 %}
+<div class="modal fade" id="modal-input{{ forloop.counter }}" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Input</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body">
+<pre>{{ r.input }}</pre>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+    {%  endif %}
+
+
 {% endfor %}
 {% endblock %}
