@@ -215,6 +215,34 @@ def unzip_zip_file(zip_path, f, in_out):
     return
 
 
+# delete unziped files
+def delete_unzipped_files(zip_path, in_out):
+    path = os.path.dirname(zip_path) + '/temp' + str(in_out)
+    to_print = ["FILE DELETED:"]
+    count = 0
+    for c in os.walk(path):
+        count += 1
+    pos = 0
+    for file in os.walk(path):
+        pos += 1
+        if pos == count:
+            for f in file[2]:
+                os.remove(str(file[0]) + "/" + str(f))
+                to_print.append(f)
+            print_variables_debug(to_print)
+
+    # for file in os.walk(extracted_dir):
+    #     print_variables_debug(["FILE DELETED:", file])
+    #
+    # print_variable_debug("Unzipping file " + str(file_name))
+    # with zipfile.ZipFile(f, 'r') as in_files:
+    #     print_variable_debug("Extracting file " + str(file_name) + " to " + str(extract_dir))
+    #     in_files.extractall(extract_dir)
+    # print_variable_debug("File " + str(file_name) + " unzipped")
+
+    return
+
+
 # -------------------------------------------------- functions needed --------------------------------------------------
 # check in files
 def check_in_files(f, contest):
@@ -491,7 +519,6 @@ def set_test_in_order(tests):
     last_number = 0
     print_variables_debug(tests)
 
-
     for i in range(len(tests[1])):
         for test in tests[1]:
             file_name = test.split('.')[0]
@@ -566,7 +593,7 @@ def admin_test_creation(request):
             print_variables_debug(["NUMBER OF FILES WITH THE INPUTS FOR THE TESTS:", str(n_tests)])
             # print_variable_debug(zip_out)
             out_files = set_test_in_order(check_out_files(zip_out, contest, n_tests))
-            print_variables_debug(["FILE ZIP THAT CONTAINS THE FILES WITH THE OUTPUTS FOR THE TESTS:",zip_out,
+            print_variables_debug(["FILE ZIP THAT CONTAINS THE FILES WITH THE OUTPUTS FOR THE TESTS:", zip_out,
                                    "\nFILES WITH THE OUTPUTS FOR THE TESTS:", out_files])
 
             a_ok = True
@@ -575,7 +602,7 @@ def admin_test_creation(request):
             out_files_names = out_files[1]
 
             for i in range(len(in_files_names)):
-                if not in_files_names.split('/ins/')[1].split('.')[0] ==\
+                if not in_files_names.split('/ins/')[1].split('.')[0] == \
                        out_files_names.split('/outs/')[1].split('.')[0]:
                     error_var = ["THE FOLLOWING FILES DO NOT MATCH:",
                                  in_files_names.split('/ins/')[1].split('.')[0],
@@ -629,17 +656,20 @@ def admin_test_creation(request):
                                            new_test.use_for_memory_benchmark,
                                            new_test.use_for_time_benchmark])
                     # print_variables_debug(["THE ", i])
+
+                delete_unzipped_files(zip_in.path, '/in')
+
+                delete_unzipped_files(zip_out.path, '/out')
             # print(obj)
         else:
             print_error(["THE FOLLOWING FILES ARE NOT ZIP TYPE FILES: \n",
-                                 str(zip_in).split('.')[0],
-                                 "\n" + str(zip_out).split('.')[0]])
+                         str(zip_in).split('.')[0],
+                         "\n" + str(zip_out).split('.')[0]])
 
         # obj.save()
         return redirect(contest.get_absolute_url())
-        # obj.save()
-    context = ({'form': test_form})
 
+    context = ({'form': test_form})
     return render(request, template_name, context)
 
 
@@ -827,8 +857,7 @@ def attempt_view(request, id):
                                          errors='strict')
         res.obtained_output = smart_text(res.output.read(), encoding='utf-8', strings_only=False, errors='strict')
         res.input = smart_text(res.test.input_file.read(), encoding='utf-8', strings_only=False,
-                                         errors='strict')
-
+                               errors='strict')
 
     context = {'contest': contest_obj}
     context.update({'team': team})

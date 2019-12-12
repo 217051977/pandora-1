@@ -7,6 +7,8 @@ print("\nFile path: " + path)
 
 count = 0
 
+print(dirname(path))
+
 for c in walk(dirname(path)):
     count += 1
 
