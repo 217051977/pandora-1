@@ -2,6 +2,11 @@
 {% load static from staticfiles %}
 {% block content %}
 
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+	<h1 class="h2">{{ contest.short_name }} - {{ contest.title }}: {{ title }}</h1>
+</div>
+
+
 <div class="row justify-content-center align-items-center">
 	<div class="col-md-6">
 		<div class="card border rounded shadow-sm mb-4 mt-4">
@@ -60,8 +65,8 @@
 							<tr>
 								<td>{{ forloop.counter }}</td>
 								<td>{{ r.test.weight_pct|floatformat }} &#37;</td>
-								<td>{% if r.execution_time == maxsize %}Inf{% else %}{{ r.execution_time }} (&mu;s){% endif %}</td>
-								<td>{{ r.memory_usage }} (kbytes)</td>					
+								<td>{{ r.execution_time }} (ms)</td>
+								<td>{{ r.memory_usage }} (kiB)</td>					
 								<td>{% if r.test.mandatory %}Mandatory{% else %}General{% endif %}</td>
 								<td>{% if r.passed %}<span class="oi oi-check text-success"></span>{% else %}<span class="oi oi-x text-danger"></span>{% endif %}</td>
 								<td>

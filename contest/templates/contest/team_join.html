@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+	<h1 class="h2">{{ contest.short_name }} - {{ contest.title }}: {{ title }}</h1>
+</div>
+
+
     <div class="jumbotron text-white rounded bg-dark mt-4">
         <h1 class="display-4 font-italic">Join a Team</h1>
         <p class="lead my-3">Select a team from the list below. If there are no teams, or if you can't find your team you can always...</p>

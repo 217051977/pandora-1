@@ -1,12 +1,48 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="jumbotron text-white rounded bg-dark mt-4">
-	<h1 class="display-4 font-italic">{{ contest.short_name }} - {{ contest.title }}</h1>
-	<div class="mb-1 text-muted">From {{ contest.start_date }} to {{ contest.end_date }}</div>
-	<div class="mb-1 text-muted">Min team elements = {{ contest.min_team_members }}, max team elements={{ contest.max_team_members }}</div>
-	<div class="mb-1 text-muted">Maximum classification: {{ contest.max_classification }}</div>
-	<p class="lead my-3">{{ contest.description }}</p>
-	<a href="{{ contest.sow.url }}"><strong class="d-inline-block mb-2 text-success">Statement Of Work</strong></a>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+	<h1 class="h2">{{ contest.short_name }} - {{ contest.title }}: {{ title }}</h1>
 </div>
+
+<div class="row justify-content-center align-items-center">
+	<div class="col-md-6">
+		<div class="card border rounded shadow-sm mb-4 mt-4">
+			<div class="card-body text-center">
+				<p class="lead my-3">{{ contest.description }}</p>
+				<p class="card-text mb-auto">
+					<table class="table">
+						<tbody>
+							<tr>
+								<td>Kick Off</td>
+								<td>{{ contest.start_date }}</td>
+							</tr>
+							<tr>
+								<td>Deadline</td>
+								<td>{{ contest.end_date }}</td>
+							</tr>
+							<tr>
+								<td>Min Nr. of Elements</td>
+								<td>{{ contest.min_team_members }}</td>
+							</tr>
+							<tr>
+								<td>Max Nr. of Elements</td>
+								<td>{{ contest.max_team_members }}</td>
+							</tr>
+							<tr>
+								<td>Max Classification</td>
+								<td>{{ contest.max_classification }}</td>
+							</tr>								
+							</tbody>
+					</table>
+					<a href="{{ contest.sow.url }}"><strong class="d-inline-block mb-2 text-success">Statement Of Work</strong></a>
+				</p>
+			</div>
+		</div>
+	</div>	
+</div>
+
+
+
 {% endblock %}

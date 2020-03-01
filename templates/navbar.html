@@ -1,82 +1,16 @@
 {% load static from staticfiles %}
 
-<nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
-	<a class="navbar-brand" href="{% url 'home' %}">
-		<img src="{% static 'logo.png' %}" height="50" class="d-inline-block align-top" alt="">
-	</a>
-	<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-		<span class="navbar-toggler-icon"></span>
-	</button>
 
-	<div class="collapse navbar-collapse justify-content-center" id="navbarSupportedContent">
-		<ul class="navbar-nav mr-auto">
-			{% if contest %}
-			 <li class="nav-item dropdown">
-			 	<a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-			 		<span class="oi oi-project"></span> {{ contest.short_name }}
-			 	</a>
-			 	<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-			 		<a class="dropdown-item" href="{{ contest.get_absolute_url }}status/"><span class="oi oi-graph"></span> Status</a>
-			 		<a class="dropdown-item" href="{{ contest.get_absolute_url }}atempt/"><span class="oi oi-data-transfer-upload"></span> Submit</a>
-			 		<a class="dropdown-item" href="{{ contest.get_absolute_url }}ranking/"><span class="oi oi-sort-ascending"></span> Ranking</a>
-			 		<a class="dropdown-item" href="{{ contest.get_absolute_url }}myteam/"><span class="oi oi-people"></span> Team</a>
-                    {% if user.is_superuser %}
+<nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+	<a class="navbar-brand col-sm-3 col-md-2 mr-0" href="{% url 'home' %}"><img src="{% static 'logo3.png' %}" height="30" class="d-inline-block align-top" alt=""></a>
+	
+	<ul class="navbar-nav px-3">
+	  <li class="nav-item text-nowrap">
+		<a class="nav-link" href="{% url 'logout' %}">
+			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+		</a>
+	  </li>
+	</ul>
+  </nav>
 
-			 		    <a class="dropdown-item" href="{{ contest.get_absolute_url }}admin-view/"><span class="oi oi-people"></span> Admin</a>
-                        <a class="dropdown-item" href="{{ contest.get_absolute_url }}admin-view/test/chooser/"><span class="oi oi-people"></span> Edit contest tests</a>
 
-                    {% endif %}
-
-			 	</div>
-			 </li>
-			{% else %}
-
-                {% if user.is_superuser %}
-
-                    <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <span class="oi oi-project"></span> Admin
-                    </a>
-                    <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                        <a class="dropdown-item" href="/admin-view/contest-creation"><span class="oi oi-graph"></span> Contest creation</a>
-                        <a class="dropdown-item" href="/admin-view/test-creation"><span class="oi oi-graph"></span> Test creation</a>
-
-                    </div>
-                 </li>
-
-                {% endif %}
-
-			{% endif %}
-
-		</ul>
-
-        {% if user.is_superuser %}
-
-            {% if contest %}
-
-                <input type="button" onclick="location.href='{{ contest.get_absolute_url }}grades-downloader/';" value="Extract grades"/>
-
-            {% endif %}
-
-        {% endif %}
-
-		<ul class="navbar-nav navbar-right">
-			{% if user.is_authenticated %}
-			 <li class="nav-item dropdown">
-			 	<a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-			 		<span class="oi oi-person"></span>
-			 	</a>
-			 	<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-			 		<a class="dropdown-item" href="{% url 'profile' %}"><span class="oi oi-person"></span> My Info</a>
-			 		<a class="dropdown-item" href="{% url 'logout' %}"><span class="oi oi-account-logout"></span> Logout</a>
-			 		<a class="dropdown-item" href="{% url 'about' %}"><span class="oi oi-info"></span> About</a>
-			 	</div>
-			 </li>
-			{% else %}
-			<li class="nav-item">
-				<a class="nav-link" href="{% url 'login' %}"><span class="oi oi-account-login"></span> login</a>
-			</li>
-			{% endif %}	
-		</ul>
-	</div>
-</nav>

@@ -1,5 +1,4 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth.models import User
 from .models import Atempt, Team, Contest, Test, get_contest_code_path, TeamMember, Profile
 
@@ -45,16 +44,18 @@ class CreateTestModelForm(forms.ModelForm):
 		return output_file
 
 
-class SignUpForm(UserCreationForm):
-	first_name = forms.CharField(required=True, label='First Name', max_length=30)
-	last_name = forms.CharField(required=True, label='Last Name', max_length=150)
+class UserEditForm(forms.ModelForm):
+	class Meta:
+		model = User
+		fields = ['email','first_name','last_name']
+
+class ProfileEditForm(forms.ModelForm):
 	number = forms.IntegerField(required=True, label='Student Number')
 	gprd = forms.BooleanField(required=True, initial=False,
 							  label='Agree to share my information (name, email, number, username, grade) with the authors and other users of this application')
-
 	class Meta:
-		model = User
-		fields = ('email', 'username', 'password1', 'password2')
+		model = Profile
+		fields = ['number','gprd']
 
 
 class TeamMemberApprovalForm(forms.Form):

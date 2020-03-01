@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% load static from staticfiles %}
 {% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+	<h1 class="h2">{{ contest.short_name }} - {{ contest.title }}: {{ title }}</h1>
+</div>
 
 <div class="row">
 	<div class="col-md-6">
@@ -36,16 +39,17 @@
 								<td>{{ last_classification }}</td>
 							</tr>							
 							<tr>
-								<td>Number of Submitions</td>						
+								<td>Number of Submissions</td>						
 								<td>{{ number_of_submitions }}</td>
 							</tr>
 							<tr>
 								<td>Time Benchmark</td>						
-								<td>{% if last_execution_time == maxsize %}Inf{% else %}{{ last_execution_time }} (&mu;s){% endif %}</td>
+								<td>{{ last_execution_time }} (ms)</td>
 							</tr>
 								<td>Memory Benchmark</td>						
-								<td>{% if last_memory_usage == maxsize %}Inf{% else %}{{ last_memory_usage }} (kbytes){% endif %}</td>
-							</tr>							
+								<td>{{ last_memory_usage }} (kiB)</td>
+							</tr>						
+
 						</tbody>
 					</table>
 				</p>
@@ -68,7 +72,7 @@
 								<th>User</th>
 								<th>When</th>
 								<th>Comment</th>						
-								<th>Time [&mu;s]</th>
+								<th>Time [ms]</th>
 								<th>Mem [kbytes]</th>
 								<th>Grade</th>
 							</tr>
@@ -80,8 +84,8 @@
 								<td>{{ a.user.username }}</td>
 								<td>{{ a.date }}</td>
 								<td>{{ a.comment }}</td>
-								<td>{% if a.time_benchmark == maxsize %}Inf{% else %}{{ a.time_benchmark }}{% endif %}</td>					
-								<td>{% if a.memory_benchmark == maxsize %}Inf{% else %}{{ a.memory_benchmark }}{% endif %}</td>					
+								<td>{{ a.time_benchmark }}</td>					
+								<td>{{ a.memory_benchmark }}</td>					
 								<td>{{ a.grade }}</td>
 							</tr>
 							{% endfor %}

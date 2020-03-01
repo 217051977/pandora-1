@@ -2,6 +2,10 @@ import os
 
 from .DB_SetUp import *
 
+try:
+    from .local_settings import *
+except ImportError:
+    pass
 
 DB_USER = db_user()
 DB_PASSWORD = db_password()
@@ -46,7 +50,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'crispy_forms',
-    'contest'
+    'contest',
+    'social_django'
 ]
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
@@ -74,12 +79,27 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+		'social_django.context_processors.backends',  # <--
+		'social_django.context_processors.login_redirect', # <--
             ],
         },
     },
 ]
 
 WSGI_APPLICATION = 'pandora.wsgi.application'
+
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.github.GithubOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+)
+#LOGIN_REDIRECT_URL = '/manage/'
+LOGOUT_REDIRECT_URL = '/'
+SOCIAL_AUTH_URL_NAMESPACE = 'social'
+
+LOGIN_URL = 'login'
+#LOGOUT_URL = 'logout'
+LOGIN_REDIRECT_URL = 'home'
+
 
 
 # Database
@@ -143,8 +163,8 @@ MEDIA_ROOT = os.path.join(LOCAL_STATIC_CDN_PATH)
 MEDIA_URL = '/media/' # django-storages
 
 
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+#LOGIN_REDIRECT_URL = '/'
+#LOGOUT_REDIRECT_URL = '/'
 
 URL_PREFIX = 'pandora/'
 

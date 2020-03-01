@@ -6,15 +6,17 @@ import sys
 import csv
 import zipfile
 from shutil import copyfile
+from io import StringIO
+import io
+import time
 
-from .forms import SignUpForm, AttemptModelForm, TeamModelForm, TeamMemberForm, TeamMemberApprovalForm, \
-	CreateContestModelForm, CreateTestModelForm, TestForm
+from .forms import AttemptModelForm, TeamModelForm, TeamMemberForm, TeamMemberApprovalForm, \
+	CreateContestModelForm, CreateTestModelForm, TestForm, ProfileEditForm, UserEditForm
 from .models import Contest, Classification, Team, TeamMember, Atempt, SafeExecError, Test
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, update_session_auth_hash, logout  # last 2 imported
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordChangeForm, UserChangeForm
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.files import File
 from django.db.models import Max
@@ -76,7 +78,6 @@ def print_variables_debug(variables):
 # ----------------------- functions needed in the functions that are needed that are also needed -----------------------
 # check output function
 def check_output(command, cwd):
-	print('cwd = ' + cwd)
 	process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
 							   universal_newlines=True, cwd=cwd)
 	output = process.communicate()
@@ -124,10 +125,17 @@ def exec_command(test, contest, submission_dir, obj_file, user_output, user_repo
 	exec_cmd += "--usage %s " % user_report
 	exec_cmd += "--exec "
 
-	run_args = str(test.run_arguments)
-	run_args2 = run_args.replace('%f1%', opt_user_file1)
+	if test.run_arguments:
+		run_args = str(test.run_arguments)
+	else:
+		run_args = ''
 
-	exec_cmd += obj_file + ' ' + run_args2 + ' < ' + test.input_file.path + ' > ' + user_output
+	if opt_user_file1:
+		run_args = run_args.replace('%f1%', opt_user_file1)
+	
+	ascii_path = os.path.join(settings.MEDIA_ROOT, "ascii")
+#	exec_cmd += obj_file + ' ' + run_args + ' < ' + test.input_file.path + ' > ' + user_output
+	exec_cmd += obj_file + ' ' + run_args + ' < ' + test.input_file.path + '| ' + ascii_path + ' > ' + user_output
 
 	return exec_cmd
 
@@ -315,7 +323,8 @@ def create_test(request, in_files, out_files, contest):
 			obj.save()
 	return
 
-
+def remove_non_ascii_1(text):
+    return ''.join([i if ord(i) < 128 else '@' for i in text])
 
 def handle_uploaded_file(atempt, f, contest):
 	safeexec_errors = SafeExecError.objects.all()
@@ -331,13 +340,15 @@ def handle_uploaded_file(atempt, f, contest):
 	print('source path = ' + src_path)
 
 	submition_dir = os.path.dirname(src_path)
-	obj_file = submition_dir + '/' + src_name + '.user.o'
+	#obj_file = submition_dir + '/' + src_name + '.user.o'
+	obj_file = src_name + '.user.o'
 
 	#print('submition dir = ' + submition_dir)
 
 	atempt.compile_error = False
 	# my_cmd = 'gcc ' + contest.compile_flags + ' ' + src_base + ' -o ' + obj_file + ' ' + contest.linkage_flags
-	my_cmd = 'gcc ' + contest.compile_flags + ' ' + submition_dir + '/*.c ' + ' -I ' + submition_dir + '/src/*.c ' + ' -o ' + obj_file + ' ' + contest.linkage_flags
+	my_cmd = 'gcc ' + contest.compile_flags + ' ' + '*.c ' + ' -I '  + './src/*.c ' + ' -o ' + obj_file + ' ' + contest.linkage_flags
+	#my_cmd = 'gcc ' + contest.compile_flags + ' ' + submition_dir + '/*.c ' + ' -I ' + submition_dir + '/src/*.c ' + ' -o ' + obj_file + ' ' + contest.linkage_flags
 
 	print('compilation: ' + my_cmd)
 	output, ret = check_output(my_cmd, submition_dir)
@@ -373,7 +384,11 @@ def handle_uploaded_file(atempt, f, contest):
 		(testout_name, ext) = os.path.splitext(testout_base)
 		user_output = os.path.join(submition_dir, testout_base + '.user')
 		user_report = os.path.join(submition_dir, testout_name + '.report')
+#		user_output = testout_base + '.user'
+#		user_report = testout_name + '.report'
 
+
+		# copy option file to the same path
 		if test.opt_file1:
 			opt_file_base = os.path.basename(test.opt_file1.path)
 			opt_user_file1 = os.path.join(submition_dir, opt_file_base)
@@ -383,22 +398,22 @@ def handle_uploaded_file(atempt, f, contest):
 
 		exec_cmd = exec_command(test, contest, submition_dir, obj_file, user_output, user_report, opt_user_file1)
 
-		print('exec cmd is:\n')
+
+		print('exec cmd is:')
 		print(exec_cmd)
 
 		timeStarted = datetime.datetime.now()  # Save start time.
 		check_output(exec_cmd, submition_dir)
-		record.execution_time = (datetime.datetime.now() - timeStarted).microseconds  # Get execution time.
+		record.execution_time = round((datetime.datetime.now() - timeStarted).microseconds / 1000,0) # Get execution time.
+
 
 		# save files
 		f = open(user_report, "r")
 		lines = f.readlines()
 		f.close()
+		os.remove(user_report)
 
-		f = open(user_report)
-		record.report_file.save(user_report, File(f))
-		f.close()
-
+		# problematic save
 		f = open(user_output)
 		record.output.save(user_output, File(f))
 		f.close()
@@ -447,9 +462,6 @@ def handle_uploaded_file(atempt, f, contest):
 			atempt.cpu_time += record.cpu_time
 			atempt.elapsed_time += record.elapsed_time
 
-			print('test passed pct = ' + str(test.weight_pct))
-			print('accumulated pct = ' + str(pct))
-
 			if test.use_for_memory_benchmark:
 				atempt.memory_benchmark = record.memory_usage
 		else:
@@ -457,14 +469,14 @@ def handle_uploaded_file(atempt, f, contest):
 
 			if test.mandatory:
 				mandatory_failed = True
-
 		record.save()
+		os.remove(user_output)
 
-	#print('obtained pct = ' + str(pct))
-	#print('max_class = ' + str(contest.max_classification))
+		
+
 	atempt.grade = (round(pct / 100 * contest.max_classification, 0), 0)[mandatory_failed]
 	atempt.save()
-
+	os.remove(os.path.join(submition_dir, obj_file))
 
 # get functions
 def get_team_members(request, contest_id, team_id):
@@ -531,7 +543,7 @@ def set_test_in_order(tests):
 
 # ---------------------------------------------- @login_required functions ---------------------------------------------
 # admin choose the test to edit
-@login_required
+@superuser_only
 def admin_choose_test(request, id):
 	template_name = 'contest/test_chooser.html'
 
@@ -604,7 +616,7 @@ def admin_choose_test(request, id):
 
 
 # admin creations
-@login_required
+@superuser_only
 def admin_contest_creation(request):
 	template_name = 'contest/contest_creation.html'
 
@@ -631,7 +643,7 @@ def admin_contest_creation(request):
 	return render(request, template_name, context)
 
 
-@login_required
+@superuser_only
 def admin_test_creation(request):
 	template_name = 'contest/test_creation.html'
 
@@ -710,7 +722,7 @@ def admin_test_creation(request):
 
 
 # admin test editor
-@login_required
+@superuser_only
 def admin_test_editor(request, id, t_id):
 	template_name = 'contest/test_edition.html'
 
@@ -777,7 +789,7 @@ def admin_test_editor(request, id, t_id):
 
 
 # admin view
-@login_required
+@superuser_only
 def admin_view(request, id):
 	template_name = 'contest/admin_view.html'
 
@@ -834,8 +846,6 @@ def admin_view(request, id):
 
 	form = TeamMemberForm(request.POST or None)
 
-	print_form_info_debug(form)
-
 	if form.is_valid():
 		t_id = form.cleaned_data.get("team_id")
 		# verificar codigo team join e team status
@@ -859,7 +869,7 @@ def admin_view(request, id):
 	return render(request, template_name, context)
 
 
-@login_required
+@superuser_only
 def admin_view_teams_status(request, c_id, t_id):
 	template_name = 'contest/atempt_list.html'
 
@@ -878,8 +888,8 @@ def admin_view_teams_status(request, c_id, t_id):
 	else:
 		context.update({'number_of_submitions': 0})
 		context.update({'last_classification': 0})
-		context.update({'last_execution_time': int(sys.maxsize)})
-		context.update({'last_memory_usage': int(sys.maxsize)})
+		context.update({'last_execution_time': 0})
+		context.update({'last_memory_usage': 0})
 
 	team_obj.members = members
 	context.update({'team': team_obj})
@@ -892,6 +902,11 @@ def admin_view_teams_status(request, c_id, t_id):
 # attempt
 @login_required
 def attempt_list_view(request, id):
+	if not request.user.profile.number:
+		return redirect('complete_profile')
+	if not request.user.profile.valid:
+		return redirect('not_active')
+
 	template_name = 'contest/atempt_list.html'
 
 	contest_obj = get_object_or_404(Contest, id=id)
@@ -917,13 +932,18 @@ def attempt_list_view(request, id):
 	team_obj.members = members
 	context.update({'team': team_obj})
 	context.update({'atempts': atempts})
-	context.update({'maxsize': int(sys.maxsize)})
+	context.update({'title': "Status"})
 
 	return render(request, template_name, context)
 
 
 @login_required
 def attempt_view(request, id):
+	if not request.user.profile.number:
+		return redirect('complete_profile')
+	if not request.user.profile.valid:
+		return redirect('not_active')
+
 	template_name = 'contest/atempt_detail.html'
 
 	atempt_obj = get_object_or_404(Atempt, id=id)
@@ -942,12 +962,12 @@ def attempt_view(request, id):
 	mandatory_passed = atempt_obj.classification_set.filter(passed=True, test__mandatory=True).count()
 	general_passed = atempt_obj.classification_set.filter(passed=True, test__mandatory=False).count()
 
-	print('number of results ' + str(results.count()))
-	print('number of tests ' + str(n_tests))
-	print('number of mandatory tests ' + str(n_mandatory))
-	print('number of general tests ' + str(n_general))
-	print('number of general passed tests ' + str(general_passed))
-	print('number of mandatory passed tests ' + str(mandatory_passed))
+#	print('number of results ' + str(results.count()))
+#	print('number of tests ' + str(n_tests))
+#	print('number of mandatory tests ' + str(n_mandatory))
+#	print('number of general tests ' + str(n_general))
+#	print('number of general passed tests ' + str(general_passed))
+#	print('number of mandatory passed tests ' + str(mandatory_passed))
 
 	for res in results:
 		res.expected_output = smart_text(res.test.output_file.read(), encoding='utf-8', strings_only=False,
@@ -966,12 +986,17 @@ def attempt_view(request, id):
 	context.update({'general_passed': general_passed})
 	context.update({'n_general': n_general})
 	context.update({'results': results})
-
+	context.update({'title': "Atempt Detail"})
 	return render(request, template_name, context)
 
 
 @login_required
 def attempt_create_view(request, id):
+	if not request.user.profile.number:
+		return redirect('complete_profile')
+	if not request.user.profile.valid:
+		return redirect('not_active')
+
 	template_name = 'contest/contest_form.html'
 	contest_obj = get_object_or_404(Contest, id=id)
 	context = {'contest': contest_obj}
@@ -1013,28 +1038,8 @@ def attempt_create_view(request, id):
 		handle_uploaded_file(obj, obj.file, contest_obj)
 		return redirect(obj.get_absolute_url())
 
-	context.update({'form': form})
+	context.update({'form': form, 'title': "Submit"})
 	return render(request, template_name, context)
-
-
-# change password
-@login_required
-def change_password_view(request):
-	if request.method == 'POST':
-		form = PasswordChangeForm(request.user, request.POST)
-		if form.is_valid():
-			user = form.save()
-			update_session_auth_hash(request, user)  # Important!
-			messages.success(request, 'Your password was successfully updated!')
-			return redirect('change_password')
-		else:
-			messages.error(request, 'Please correct the error below.')
-	else:
-		form = PasswordChangeForm(request.user)
-
-	return render(request, 'form.html', {'title': 'Change Password', 'form': form, 'button': 'submit'})
-
-
 
 # extract grades
 @superuser_only
@@ -1075,38 +1080,72 @@ def extract_grades(request, id):
 	for g in grades:
 		writer.writerow([g.student_number,
 			g.team_name,
-			g.team_id,
+			g.id,
 			g.first_name,
 			g.last_name,
 			g.grade,
 			g.n_atempts])
 
-	# make a row splited by comas
-	# writer.writerow(['First row', 'Foo', 'Bar', 'Baz'])
-	# writer.writerow(['Second row', 'A', 'B', 'C', '"Testing"', "Here's a quote"])
-
 	return response
+
+# extract grades
+@superuser_only
+def extract_zip(request, id):
+	# get the contest
+	contest_obj = get_object_or_404(Contest, id=id)
+	qs = Atempt.objects.filter(contest=contest_obj).values('team_id').annotate(id = Max('id'))
+	qs2 = Atempt.objects.filter(id__in=qs.values('id'))
+
+	zip_buffer = io.BytesIO()
+
+	with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+		for a in qs2:
+			in_file = open(os.path.abspath(a.file.path), "rb") # opening for [r]eading as [b]inary
+			data = in_file.read() # if you only wanted to read 512 bytes, do .read(512)
+			in_file.close()
+
+			fdir, fname = os.path.split(a.file.path)
+			zip_path = os.path.join(a.team.name, fname)
+			zip_file.writestr(zip_path, data)
+
+	zip_buffer.seek(0)
+
+	resp = HttpResponse(zip_buffer, content_type='application/zip')
+	resp['Content-Disposition'] = 'attachment; filename = %s' % 'bla.zip'
+	return resp
 
 
 # contest
 @login_required
 def contest_list_view(request):
-	#	if not request.user.is_active:
-	#		return redirect('not_active')
+	if not request.user.profile.number:
+		return redirect('complete_profile')
+	if not request.user.profile.valid:
+		return redirect('not_active')
+
 	template_name = 'contest/list.html'
 
-	contests_qs = Contest.objects.filter(visible=True)
+	if request.user.is_superuser:
+		contests_qs = Contest.objects.all()
+	else:
+		contests_qs = Contest.objects.filter(visible=True)
+		
 	qs = TeamMember.objects.select_related('team').filter(user=request.user)
 
 	context = {'object_list': contests_qs,
 			   'team_contests': qs,
-			   'title': 'Welcome to PANDORA',
+			   'title': 'Contests',
 			   'description': 'PANDORA is an Automatic Assement Tool.'}
 	return render(request, template_name, context)
 
 
 @login_required
 def contest_detail_view(request, id):
+	if not request.user.profile.number:
+		return redirect('complete_profile')
+	if not request.user.profile.valid:
+		return redirect('not_active')
+
 	obj = get_object_or_404(Contest, id=id)
 
 	present = timezone.now()
@@ -1124,14 +1163,20 @@ def contest_detail_view(request, id):
 @login_required
 def profile_view(request):
 	template_name = 'contest/profile.html'
-	context = {'user': request.user}
+	context = {'user': request.user, 'title': "My Information"}
 	return render(request, template_name, context)
 
 
 # ranking
 @login_required
 def ranking_view(request, id):
+	if not request.user.profile.number:
+		return redirect('complete_profile')
+	if not request.user.profile.valid:
+		return redirect('not_active')
+
 	template_name = 'contest/ranking.html'
+
 
 	contest_obj = get_object_or_404(Contest, id=id)
 	context = {'contest': contest_obj}
@@ -1152,18 +1197,22 @@ def ranking_view(request, id):
 	atempts = Atempt.objects.raw(query)
 
 	context.update({'atempts': atempts})
-	context.update({'maxsize': int(sys.maxsize)})
+	context.update({'title': "Ranking"})
 	return render(request, template_name, context)
 
 
 # team
 @login_required
 def team_create_view(request, id):
+	if not request.user.profile.number:
+		return redirect('complete_profile')
+	if not request.user.profile.valid:
+		return redirect('not_active')
+
 	template_name = 'contest/contest_form.html'
 	contest_obj = get_object_or_404(Contest, id=id)
 	context = {'contest': contest_obj}
 
-	teams = Team.objects.filter(contest__id=id)  # get all teams associated with this contest
 	user_team = TeamMember.objects.select_related('team').filter(team__contest=contest_obj.id,
 																 user=request.user).first()
 
@@ -1190,6 +1239,12 @@ def team_create_view(request, id):
 
 @login_required
 def team_detail_view(request, id):
+	if not request.user.profile.number:
+		return redirect('complete_profile')
+	if not request.user.profile.valid:
+		return redirect('not_active')
+
+
 	template_name = 'contest/team_detail.html'
 
 	contest_obj = get_object_or_404(Contest, id=id)
@@ -1239,6 +1294,11 @@ def team_detail_view(request, id):
 
 @login_required
 def team_join_view(request, id):
+	if not request.user.profile.number:
+		return redirect('complete_profile')
+	if not request.user.profile.valid:
+		return redirect('not_active')
+
 	template_name = 'contest/team_join.html'
 	contest_obj = get_object_or_404(Contest, id=id)
 	context = {'contest': contest_obj}
@@ -1293,34 +1353,35 @@ def pagelogout(request):
 		return redirect('home')
 
 
-# signup view
-def signup_view(request):
-	if request.method == 'POST':
-		form = SignUpForm(request.POST)
-		if form.is_valid():
-			user = form.save()
-			user.refresh_from_db()  # load the profile instance created by the signal
-			user.profile.number = form.cleaned_data.get('number')
-			user.profile.gprd = form.cleaned_data.get('gprd')
-			user.profile.valid = False
-			user.save()
-			raw_password = form.cleaned_data.get('password1')
-			user = authenticate(username=user.username, password=raw_password)
-			login(request, user)
-			return redirect('home')
-	else:
-		form = SignUpForm()
-
-	context = {'form': form,
-			   'title': 'Register'}
-	return render(request, 'form.html', context)
-
-
 # non active view
 def nonactive_view(request):
 	template_name = 'contest/error.html'
-	context = {'title': 'Welcome to PANDORA',
+	context = {'title': 'Not active',
 			   'description': 'Your account is not active. Please wait for the administrator to activate your account.'}
 	return render(request, template_name, context)
 
-# in progress
+
+@login_required
+def complete_profile_view(request):
+	profile_form = ProfileEditForm(request.POST or None, instance = request.user.profile)
+	user_form = UserEditForm(request.POST or None, instance = request.user)
+	
+	if all((profile_form.is_valid(), user_form.is_valid())):
+		profile_form.save()
+		user_form.save()
+		return redirect('home')
+	else:
+		user_form = UserEditForm(request.POST or None, instance = request.user)
+		profile_form = ProfileEditForm(request.POST or None, instance = request.user.profile)
+
+	context = {'form': user_form,
+				'form2': profile_form,
+				'title': 'Complete Information'}
+	return render(request, 'form.html', context)
+
+
+@login_required
+def home_view(request):
+	template_name = 'contest/dashboard.html'
+	context = {'title': "Dashboard"}
+	return render(request, template_name, context)

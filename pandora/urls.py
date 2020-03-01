@@ -18,8 +18,11 @@ from django.contrib import admin
 from django.urls import path, re_path, include # url
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.contrib.auth import views as auth_views
-from contest.views import (
-    signup_view,
+from django.contrib.auth.views import LogoutView
+from django.urls import include
+
+from .views import (
+    manage,
 )
 
 from .views import about_page
@@ -28,6 +31,15 @@ urlpatterns = [
     re_path(r'^about/$', about_page, name='about'),
     path('admin/', admin.site.urls),
     path('', include('contest.urls')),
+	re_path(r'^login/$', auth_views.LoginView.as_view(), name='login'),
+    re_path(r'^logout/$', auth_views.LogoutView.as_view(), name='logout'),
+	re_path(r'^oauth/', include('social_django.urls', namespace='social')),
+	#path(
+    #'logout/',
+    #LogoutView.as_view(template_name=settings.LOGOUT_REDIRECT_URL),
+    #name='logout'
+    #),
+	#path('manage/', manage, name='manage'),
 ] + staticfiles_urlpatterns()
 
 

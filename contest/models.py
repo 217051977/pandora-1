@@ -139,7 +139,8 @@ class Team(models.Model):
 	def _get_active(self):
 		"Returns True if the team is active"
 		n_members = self.teammember_set.filter(approved=True).count()
-		return n_members >= self.contest.min_team_members and n_members <= self.contest.max_team_members
+		n_members_not_approved = self.teammember_set.filter(approved=False).count()
+		return n_members_not_approved == 0 and n_members >= self.contest.min_team_members and n_members <= self.contest.max_team_members
 
 	active = property(_get_active)
 
@@ -182,7 +183,7 @@ class Classification(models.Model):
 	test = models.ForeignKey(Test, default=1, null=False, on_delete=models.CASCADE)
 	passed = models.BooleanField(null=False, default=False)
 	output = models.FileField(blank=True, null=True, max_length=512)
-	report_file = models.FileField(blank=True, null=True, max_length=512)
+	#report_file = models.FileField(blank=True, null=True, max_length=512)
 	execution_time = models.IntegerField(blank=True, null=True)
 	error_description = models.TextField(null=True, blank=True)
 	error = models.ForeignKey(SafeExecError, blank=True, null=True, on_delete=models.SET_NULL)

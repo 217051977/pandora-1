@@ -1,18 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+	<h1 class="h2">{{ title }}</h1>
+	<div class="btn-toolbar mb-2 mb-md-0">
+	</div>
+</div>
 
 <div class="row justify-content-center align-items-center">
 	<div class="col-md-6">
 		<div class="card border rounded shadow-sm mb-4 mt-4">
 			<div class="card-body text-center">
-				<h5 class="car-title mb-2 text-primary">{{ user.first_name }} {{ user.last_name}}</h5>
 
 				<p class="card-text mb-auto">
-
 
 					<table class="table">
 
 						<tbody>
+							<tr>
+								<td scope="col">First Name:</td>
+								<td scope="col">{{ user.first_name }}</td>
+							</tr>							
+							<tr>
+								<td scope="col">Last Name:</td>
+								<td scope="col">{{ user.last_name }}</td>
+							</tr>
+										
 							<tr>
 								<td scope="col">Student Number:</td>
 								<td scope="col">{{ user.profile.number }}</td>
@@ -28,7 +40,7 @@
 						</tbody>
 					</table>
 				</p>
-				<a href="/profile/password/"><strong class="d-inline-block mb-2 text-success">Change Password</strong></a>
+				<a href="/completeprofile/"><strong class="d-inline-block mb-2 text-success">Edit Profile</strong></a>
 
 			</div>
 		</div>
