@@ -746,7 +746,7 @@ def admin_test_editor(request, id, t_id):
 							   '\n\nnproc value:\n\n', request.POST.getlist('nproc'),
 							   '\n\nfsize value:\n\n', request.POST.getlist('fsize'),
 							   '\n\nstack value:\n\n', request.POST.getlist('stack'),
-							   '\n\nclock value:\n\n', request.POST.getlist('clock')])
+							   '\n\nclockgit value:\n\n', request.POST.getlist('clock')])
 
 		if 'on' in request.POST.getlist('override'):
 			test_override = True
